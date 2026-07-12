@@ -40,8 +40,7 @@ const DashboardOverview = ({ role = 'Admin' }) => {
   return (
     <div className="w-full max-w-5xl">
 
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
+      <div className="flex items-center justify-end mb-6">
         <span className="bg-slate-800 text-slate-300 text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider border border-slate-700">
           {isDeptHead ? 'Department View' : user.role === 'Employee' ? 'Personal View' : 'Global View'}
         </span>
