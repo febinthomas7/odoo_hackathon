@@ -1,13 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signup } from '../api/authApi';
 
 const Signup = () => {
   const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    // Yahan API call aayegi
-    navigate('/dashboard');
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await signup(name, email, password);
+      // On success, redirect to login so they can log in
+      navigate('/', { state: { message: "Account created successfully! Please sign in." } });
+    } catch (err) {
+      setError(err.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -18,7 +38,7 @@ const Signup = () => {
       <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-indigo-600/30 rounded-full mix-blend-screen filter blur-[128px] animate-blob animation-delay-2000" />
       
       {/* Signup Card (Glassmorphism) */}
-      <div className="relative z-10 w-full max-w-[400px] mx-4 px-8 py-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+      <div className="relative z-10 w-full max-w-[400px] mx-4 px-8 py-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-10 mb-10">
         
         {/* Header & Logo */}
         <div className="flex flex-col items-center mb-6">
@@ -29,6 +49,8 @@ const Signup = () => {
           <p className="text-slate-400 text-sm mt-1">Join AssetFlow as an employee</p>
         </div>
 
+        {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg mb-4">{error}</div>}
+
         <form className="flex flex-col gap-4" onSubmit={handleSignup}>
           
           <div className="flex flex-col gap-1.5">
@@ -36,6 +58,8 @@ const Signup = () => {
             <input 
               type="text" 
               id="name" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="John Doe" 
               className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
               required 
@@ -47,6 +71,8 @@ const Signup = () => {
             <input 
               type="email" 
               id="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="name@company.com" 
               className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
               required 
@@ -58,6 +84,22 @@ const Signup = () => {
             <input 
               type="password" 
               id="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" 
+              className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
+              required 
+              minLength={6}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="confirmPassword" className="text-sm font-medium text-slate-300">Confirm Password</label>
+            <input 
+              type="password" 
+              id="confirmPassword" 
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••" 
               className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
               required 
@@ -66,9 +108,10 @@ const Signup = () => {
 
           <button 
             type="submit" 
-            className="mt-2 w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-medium py-3 rounded-lg text-base shadow-lg shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5"
+            disabled={loading}
+            className="mt-2 w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-medium py-3 rounded-lg text-base shadow-lg shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50"
           >
-            Create Account
+            {loading ? 'Creating...' : 'Create Account'}
           </button>
         </form>
 

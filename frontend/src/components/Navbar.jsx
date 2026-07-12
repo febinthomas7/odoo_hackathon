@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getSession, clearSession } from '../utils/session';
 
 const Navbar = ({ activeModule }) => {
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [user, setUser] = useState({ name: 'User', email: '' });
 
-  // Mock user details
-  const user = {
-    name: "Anoop Kumar",
-    email: "anoop@example.com"
-  };
+  useEffect(() => {
+    const session = getSession();
+    if (session.name) {
+      setUser({ name: session.name, email: `${session.role} Account` });
+    }
+  }, []);
 
   const handleLogout = () => {
-    // Session clear logic goes here in the future
+    clearSession();
     navigate('/');
   };
 

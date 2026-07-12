@@ -1,28 +1,8 @@
 import api from './axios';
+import { mockDepartments, mockAssetCategories, mockEmployees } from './mockData';
+import { logActivity } from './activityLogApi';
 
 const useMockFallback = true; 
-
-// Mock Data
-const departments = [
-  { id: 1, name: 'IT Support' },
-  { id: 2, name: 'Engineering' },
-  { id: 3, name: 'Human Resources' },
-  { id: 4, name: 'Sales' }
-];
-
-const categories = [
-  { id: 1, name: 'Electronics' },
-  { id: 2, name: 'Furniture' },
-  { id: 3, name: 'Vehicles' },
-  { id: 4, name: 'Software Licenses' }
-];
-
-const employees = [
-  { id: 1, name: 'John Doe', department: 'Engineering' },
-  { id: 2, name: 'Jane Smith', department: 'HR' },
-  { id: 3, name: 'Mike Tech', department: 'IT Support' },
-  { id: 4, name: 'Alice Johnson', department: 'IT Support' }
-];
 
 /**
  * GET /organization/departments/
@@ -35,7 +15,7 @@ export const getDepartments = async () => {
     return response.data;
   } catch (error) {
     console.error("API Error, falling back to mock:", error);
-    if (useMockFallback) return departments;
+    if (useMockFallback) return [...mockDepartments];
     throw error;
   }
 };
@@ -51,7 +31,7 @@ export const getAssetCategories = async () => {
     return response.data;
   } catch (error) {
     console.error("API Error, falling back to mock:", error);
-    if (useMockFallback) return categories;
+    if (useMockFallback) return [...mockAssetCategories];
     throw error;
   }
 };
@@ -67,7 +47,7 @@ export const getEmployees = async () => {
     return response.data;
   } catch (error) {
     console.error("API Error, falling back to mock:", error);
-    if (useMockFallback) return employees;
+    if (useMockFallback) return [...mockEmployees];
     throw error;
   }
 };
@@ -85,6 +65,11 @@ export const promoteEmployee = async (id, newRole) => {
     console.error("API Error, falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
+      const empIndex = mockEmployees.findIndex(e => e.id === id);
+      if (empIndex !== -1) {
+        mockEmployees[empIndex].role = newRole;
+        logActivity(`Promoted ${mockEmployees[empIndex].name} to ${newRole}`);
+      }
       return { success: true };
     }
     throw error;
@@ -104,7 +89,13 @@ export const addDepartment = async (deptData) => {
     console.error("API Error, falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return { success: true };
+      const newDept = {
+        id: Date.now(),
+        ...deptData
+      };
+      mockDepartments.push(newDept);
+      logActivity(`Created department: ${newDept.name}`);
+      return { success: true, data: newDept };
     }
     throw error;
   }
@@ -123,6 +114,11 @@ export const updateDepartment = async (id, deptData) => {
     console.error("API Error, falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
+      const index = mockDepartments.findIndex(d => d.id === id);
+      if (index !== -1) {
+        mockDepartments[index] = { ...mockDepartments[index], ...deptData };
+        logActivity(`Updated department: ${mockDepartments[index].name}`);
+      }
       return { success: true };
     }
     throw error;
@@ -142,7 +138,13 @@ export const addAssetCategory = async (catData) => {
     console.error("API Error, falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return { success: true };
+      const newCat = {
+        id: Date.now(),
+        ...catData
+      };
+      mockAssetCategories.push(newCat);
+      logActivity(`Created category: ${newCat.name}`);
+      return { success: true, data: newCat };
     }
     throw error;
   }
@@ -161,6 +163,11 @@ export const updateAssetCategory = async (id, catData) => {
     console.error("API Error, falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
+      const index = mockAssetCategories.findIndex(c => c.id === id);
+      if (index !== -1) {
+        mockAssetCategories[index] = { ...mockAssetCategories[index], ...catData };
+        logActivity(`Updated category: ${mockAssetCategories[index].name}`);
+      }
       return { success: true };
     }
     throw error;

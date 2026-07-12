@@ -1,9 +1,8 @@
 import api from './axios';
 import { mockAssets } from './mockData';
+import { logActivity } from './activityLogApi';
 
 const useMockFallback = true; 
-
-let localAssets = [...mockAssets];
 
 /**
  * GET /assets/
@@ -18,7 +17,7 @@ export const getAssets = async () => {
     console.error("API Error (getAssets), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return localAssets;
+      return [...mockAssets];
     }
     throw error;
   }
@@ -40,10 +39,12 @@ export const registerAsset = async (assetData) => {
       const newAsset = {
         ...assetData,
         id: Date.now(),
-        tag: `AF-${Math.floor(1000 + Math.random() * 9000)}`,
-        status: 'Available'
+        tag: `AF-${String(mockAssets.length + 1).padStart(4, '0')}`,
+        status: 'Available',
+        assignedTo: null
       };
-      localAssets.push(newAsset);
+      mockAssets.push(newAsset);
+      logActivity(`Registered new asset: ${newAsset.name} (${newAsset.tag})`);
       return newAsset;
     }
     throw error;
