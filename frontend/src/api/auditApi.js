@@ -5,6 +5,11 @@ const useMockFallback = true;
 
 let localCycles = [...mockAuditCycles];
 
+/**
+ * GET /audits/
+ * Retrieves all audit cycles.
+ * Role Access: Admin, Asset Manager, Department Head (dept specific)
+ */
 export const getAuditCycles = async () => {
   try {
     const response = await api.get('/audits/');
@@ -19,6 +24,11 @@ export const getAuditCycles = async () => {
   }
 };
 
+/**
+ * POST /audits/
+ * Initializes a new audit cycle for a specific department.
+ * Role Access: Admin, Asset Manager
+ */
 export const createAuditCycle = async (cycleData) => {
   try {
     const response = await api.post('/audits/', cycleData);
@@ -40,6 +50,11 @@ export const createAuditCycle = async (cycleData) => {
   }
 };
 
+/**
+ * POST /audits/:cycleId/results/
+ * Submits an audit result for a specific asset (Verified, Missing, Damaged).
+ * Role Access: Department Head, Auditor (Employee assigned to audit)
+ */
 export const submitAuditResult = async (cycleId, assetId, status) => {
   try {
     const response = await api.post(`/audits/${cycleId}/results/`, { assetId, status });
@@ -50,9 +65,7 @@ export const submitAuditResult = async (cycleId, assetId, status) => {
       await new Promise(resolve => setTimeout(resolve, 300));
       const cycle = localCycles.find(c => c.id === cycleId);
       if (cycle) {
-        // Remove existing result for this asset if any
         cycle.results = cycle.results.filter(r => r.assetId !== assetId);
-        // Add new result
         cycle.results.push({ assetId, status });
       }
       return { success: true };
@@ -61,6 +74,11 @@ export const submitAuditResult = async (cycleId, assetId, status) => {
   }
 };
 
+/**
+ * POST /audits/:cycleId/close/
+ * Closes an active audit cycle and locks results.
+ * Role Access: Admin, Asset Manager, Department Head
+ */
 export const closeAuditCycle = async (cycleId) => {
   try {
     const response = await api.post(`/audits/${cycleId}/close/`);
