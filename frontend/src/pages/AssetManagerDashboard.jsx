@@ -27,7 +27,7 @@ const AssetManagerDashboard = () => {
   const renderModule = () => {
     switch (activeModule) {
       case 'Dashboard':
-        return <DashboardOverview />;
+        return <DashboardOverview role="Asset Manager" />;
       case 'Assets':
         return <Assets />;
       case 'Allocation & Transfer':

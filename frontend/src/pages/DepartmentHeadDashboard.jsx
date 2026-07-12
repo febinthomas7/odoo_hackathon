@@ -25,7 +25,7 @@ const DepartmentHeadDashboard = () => {
   const renderModule = () => {
     switch (activeModule) {
       case 'Dashboard':
-        return <DashboardOverview />;
+        return <DashboardOverview role="Department Head" />;
       case 'Assets':
         return <Assets />;
       case 'Allocation & Transfer':

@@ -25,7 +25,7 @@ const AdminDashboard = () => {
   const renderModule = () => {
     switch (activeModule) {
       case 'Dashboard':
-        return <DashboardOverview />;
+        return <DashboardOverview role="Admin" />;
       case 'Organization setup':
         return <OrganizationSetup />;
       case 'Assets':

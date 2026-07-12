@@ -25,7 +25,7 @@ const EmployeeDashboard = () => {
   const renderModule = () => {
     switch (activeModule) {
       case 'Dashboard':
-        return <DashboardOverview />;
+        return <DashboardOverview role="Employee" />;
       case 'Allocation & Transfer':
         return <AllocationTransfer />;
       case 'Resource Booking':
