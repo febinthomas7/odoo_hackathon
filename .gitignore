@@ -1,0 +1,47 @@
+# ====================================================================
+# Django / Python Backend Exclusions
+# ====================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+
+# Local configuration and environment secrets
+.env
+.env.local
+db.sqlite3
+*.log
+
+# Media/Upload paths if any are created locally
+/backend/media/
+
+
+# ====================================================================
+# React / Node Frontend Exclusions
+# ====================================================================
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Production build artifacts
+dist/
+build/
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
