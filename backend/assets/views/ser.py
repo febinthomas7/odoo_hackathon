@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from django.contrib.auth.models import User
-from .models import Department, Asset, AllocationRequest ,ResourceBooking, AuditCycle
-from .serializers import UserSerializer, DepartmentSerializer, AssetSerializer, AllocationRequestSerializer ,ResourceBookingSerializer, AuditCycleSerializer
+from assets.models import Department, Asset, AllocationRequest ,ResourceBooking, AuditCycle
+from assets.serializers import UserSerializer, DepartmentSerializer, AssetSerializer, AllocationRequestSerializer ,ResourceBookingSerializer, AuditCycleSerializer
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer

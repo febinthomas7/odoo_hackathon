@@ -2,6 +2,41 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
+
+class BaseUserRole(models.Model):
+    # BigIntegerField accommodates a 12-digit number (up to ~9 quintillion)
+    id = models.BigIntegerField(primary_key=True) 
+    name = models.CharField(max_length=255)
+    password = models.CharField(max_length=255) # Ensure you hash passwords in production
+    email = models.EmailField(unique=True, null=True, blank=True)
+    custom_id = models.CharField(max_length=50, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        abstract = True
+        
+    def __str__(self):
+        return f"{self.id} - {self.name}"
+
+class Admin(BaseUserRole):
+    # Add any admin-specific permissions/fields here
+    pass
+
+class Employee(BaseUserRole):
+    # Links the employee to the Department model you already created
+    department = models.ForeignKey(
+        'Department', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='employees'
+    )
+    designation = models.CharField(max_length=100, blank=True, null=True)
+
+class AssetManager(BaseUserRole):
+    # Asset Managers might be restricted to specific locations or asset categories
+    managed_location = models.CharField(max_length=255, blank=True, null=True)
+
 # 1. Department Management (Organization Setup Screen)
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)

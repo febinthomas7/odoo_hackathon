@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 from pathlib import Path
 
+from datetime import timedelta
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -28,6 +30,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
+# Whitelist your React frontend ports (CRA uses 3000, Vite uses 5173)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+]
+
 
 # Application definition
 
@@ -41,6 +49,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'assets',
+    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -72,6 +81,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'assetflow.wsgi.application'
+ROOT_URLCONF = 'assetflow.urls'
 
 
 # Database
@@ -107,6 +117,23 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'assets.views.auth.ERPJWTAuthentication',
+    ),
+    # Optional but good practice: set the default permission globally
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticated',
+    # )
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  # Lasts 1 day instead of 5 minutes
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
