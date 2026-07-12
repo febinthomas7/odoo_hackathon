@@ -3,12 +3,12 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 
 // Modules
-import DashboardOverview from './modules/DashboardOverview';
-import AllocationTransfer from './modules/AllocationTransfer';
-import ResourceBooking from './modules/ResourceBooking';
-import Maintenance from './modules/Maintenance';
-import Audit from './modules/Audit';
-import Notifications from './modules/Notifications';
+import DashboardOverview from '../components/modules/DashboardOverview';
+import AllocationTransfer from '../components/modules/AllocationTransfer';
+import ResourceBooking from '../components/modules/ResourceBooking';
+import Maintenance from '../components/modules/Maintenance';
+import Audit from '../components/modules/Audit';
+import Notifications from '../components/modules/Notifications';
 
 const EmployeeDashboard = () => {
   const [activeModule, setActiveModule] = useState('Dashboard');

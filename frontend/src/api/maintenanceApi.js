@@ -1,6 +1,6 @@
 import api from './axios';
-import { mockMaintenanceRequests, mockAssets } from './mockData';
-import { logActivity } from './activityLogApi';
+import { mockMaintenanceRequests, mockAssets, mockEmployees } from './mockData';
+import { pushLog } from './activityLogApi';
 
 const useMockFallback = true; 
 
@@ -17,7 +17,17 @@ export const getMaintenanceRequests = async () => {
     console.error("API Error (getMaintenanceRequests), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return [...mockMaintenanceRequests];
+      return mockMaintenanceRequests.map(req => {
+        const asset = mockAssets.find(a => a.id === req.assetId);
+        const reporter = mockEmployees.find(e => e.id === req.reportedById);
+        const tech = mockEmployees.find(e => e.id === req.technicianId);
+        return {
+          ...req,
+          assetName: asset ? asset.name : 'Unknown Asset',
+          reportedBy: reporter ? reporter.name : 'Unknown User',
+          technician: tech ? tech.name : (req.vendorName || null)
+        };
+      });
     }
     throw error;
   }
@@ -41,14 +51,12 @@ export const raiseRequest = async (requestData) => {
         id: Date.now(),
         date: new Date().toISOString().split('T')[0],
         status: 'Pending',
-        technician: null,
+        technicianId: null,
       };
       mockMaintenanceRequests.push(newRequest);
       
-      // Sync asset status to Under Maintenance immediately upon raising request?
-      // Or maybe wait for approval. We'll wait for approval for cross-module sync.
-      
-      logActivity(`Maintenance request raised for ${requestData.assetName} by ${requestData.reportedBy}`);
+      const asset = mockAssets.find(a => a.id === parseInt(requestData.assetId));
+      await pushLog(requestData.reportedById, `Raised maintenance request for ${asset?.name}`);
       return newRequest;
     }
     throw error;
@@ -60,7 +68,7 @@ export const raiseRequest = async (requestData) => {
  * Updates request status and assigns technicians.
  * Role Access: Admin, Asset Manager, Department Head
  */
-export const updateRequestStatus = async (requestId, updates) => {
+export const updateRequestStatus = async (requestId, updates, updaterId) => {
   try {
     const response = await api.patch(`/maintenance/${requestId}/`, updates);
     return response.data;
@@ -68,22 +76,21 @@ export const updateRequestStatus = async (requestId, updates) => {
     console.error("API Error (updateRequestStatus), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      const reqIndex = mockMaintenanceRequests.findIndex(r => r.id === requestId);
-      if (reqIndex !== -1) {
-        mockMaintenanceRequests[reqIndex] = { ...mockMaintenanceRequests[reqIndex], ...updates };
+      const req = mockMaintenanceRequests.find(r => r.id === requestId);
+      if(req) {
+        Object.assign(req, updates);
         
-        // Cross-module asset sync based on status
-        const assetId = mockMaintenanceRequests[reqIndex].assetId;
-        const asset = mockAssets.find(a => a.id.toString() === assetId.toString());
-        if (asset) {
-          if (updates.status === 'In Progress' || updates.status === 'Approved') {
-            asset.status = 'Under Maintenance';
-          } else if (updates.status === 'Resolved' || updates.status === 'Rejected') {
-            asset.status = 'Available'; // Assume it goes back to available, or we could leave it if allocated. For simplicity, Available.
-          }
+        // Sync asset status if status is Approved or Resolved
+        const asset = mockAssets.find(a => a.id === req.assetId);
+        if(asset) {
+           if(req.status === 'Approved' || req.status === 'In Progress') {
+               asset.status = 'Under Maintenance';
+           } else if(req.status === 'Resolved') {
+               asset.status = 'Available';
+           }
         }
         
-        logActivity(`Maintenance request ${requestId} status updated to ${updates.status}`);
+        await pushLog(updaterId, `Updated maintenance request #${req.id} to ${req.status}`);
       }
       return { success: true };
     }

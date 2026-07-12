@@ -125,22 +125,17 @@ const AllocationsTab = ({ data, onOpenAllocate, onOpenReturn, onOpenTransfer }) 
             {activeOnly.length === 0 ? (
               <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-500">No active allocations.</td></tr>
             ) : (
-              activeOnly.map((alloc) => {
-                const isOverdue = alloc.expectedReturnDate && new Date(alloc.expectedReturnDate) < new Date();
-                return (
+              activeOnly.map((alloc) => (
                 <tr key={alloc.id} className="hover:bg-slate-800/20 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-white">{alloc.assetName}</p>
-                      {isOverdue && <span className="bg-red-500/20 text-red-400 text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">Overdue</span>}
-                    </div>
+                    <p className="font-bold text-white">{alloc.assetName}</p>
                     <p className="text-xs text-slate-500">{alloc.assetTag}</p>
                   </td>
                   <td className="px-6 py-4 font-medium text-indigo-300">{alloc.assignedTo}</td>
                   <td className="px-6 py-4">
                     <p className="text-sm">Assigned: {alloc.assignedDate}</p>
                     {alloc.expectedReturnDate && (
-                      <p className={`text-xs mt-1 flex items-center gap-1 ${isOverdue ? 'text-red-400 font-bold' : 'text-orange-400'}`}>
+                      <p className="text-xs text-orange-400 mt-1 flex items-center gap-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         Due: {alloc.expectedReturnDate}
                       </p>
@@ -152,7 +147,7 @@ const AllocationsTab = ({ data, onOpenAllocate, onOpenReturn, onOpenTransfer }) 
                     </button>
                   </td>
                 </tr>
-              )})
+              ))
             )}
           </tbody>
         </table>
@@ -217,16 +212,14 @@ const AllocateModal = ({ assets, employees, onClose, onComplete }) => {
   // Filter assets to only show 'Available' ones (Conflict rule: can't allocate an already taken asset)
   const availableAssets = assets.filter(a => a.status === 'Available');
 
-  const [formData, setFormData] = useState({ assetId: '', assetTag: '', assetName: '', assignedTo: '', expectedReturnDate: '' });
+  const [formData, setFormData] = useState({ assetId: '', assignedToId: '', expectedReturnDate: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const selectedAsset = availableAssets.find(a => a.id.toString() === formData.assetId);
     await allocateAsset({
       ...formData,
-      assetTag: selectedAsset.tag,
-      assetName: selectedAsset.name
-    });
+      assignedToId: formData.assignedToId
+    }, 1); // Mock adminId = 1
     onComplete();
     onClose();
   };
@@ -244,9 +237,9 @@ const AllocateModal = ({ assets, employees, onClose, onComplete }) => {
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Assign To</label>
-          <select required value={formData.assignedTo} onChange={e => setFormData({...formData, assignedTo: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
+          <select required value={formData.assignedToId} onChange={e => setFormData({...formData, assignedToId: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
             <option value="">Select Employee...</option>
-            {employees.map(emp => <option key={emp.id} value={emp.name}>{emp.name} ({emp.department})</option>)}
+            {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name} ({emp.department})</option>)}
           </select>
         </div>
         <div>
@@ -265,18 +258,13 @@ const TransferModal = ({ assets, employees, onClose, onComplete }) => {
   // Transfer is for assets that are ALREADY allocated
   const allocatedAssets = assets.filter(a => a.status === 'Allocated');
   
-  const [formData, setFormData] = useState({ assetId: '', requestedBy: '' });
+  const [formData, setFormData] = useState({ assetId: '', requestedById: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const selectedAsset = allocatedAssets.find(a => a.id.toString() === formData.assetId);
     await requestTransfer({
-      assetId: selectedAsset.id,
-      assetTag: selectedAsset.tag,
-      assetName: selectedAsset.name,
-      currentHolder: selectedAsset.assignedTo,
-      requestedBy: formData.requestedBy
-    });
+      assetId: formData.assetId,
+    }, parseInt(formData.requestedById));
     onComplete();
     onClose();
   };
@@ -293,9 +281,9 @@ const TransferModal = ({ assets, employees, onClose, onComplete }) => {
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Requesting For</label>
-          <select required value={formData.requestedBy} onChange={e => setFormData({...formData, requestedBy: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
+          <select required value={formData.requestedById} onChange={e => setFormData({...formData, requestedById: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
             <option value="">Select Employee...</option>
-            {employees.map(emp => <option key={emp.id} value={emp.name}>{emp.name}</option>)}
+            {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
           </select>
         </div>
         <p className="text-xs text-slate-500 mt-4">Transfer requests must be approved by an Asset Manager or Department Head before the asset is re-allocated.</p>

@@ -1,6 +1,6 @@
 import api from './axios';
-import { mockAuditCycles, mockAssets } from './mockData';
-import { logActivity } from './activityLogApi';
+import { mockAuditCycles, mockAssets, mockDepartments, mockEmployees } from './mockData';
+import { pushLog } from './activityLogApi';
 
 const useMockFallback = true; 
 
@@ -17,7 +17,12 @@ export const getAuditCycles = async () => {
     console.error("API Error (getAuditCycles), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return [...mockAuditCycles];
+      // Map IDs to readable names for the UI
+      return mockAuditCycles.map(c => ({
+        ...c,
+        department: mockDepartments.find(d => d.id === c.departmentId)?.name || c.department || 'Unknown',
+        auditors: (c.auditorIds || []).map(id => mockEmployees.find(e => e.id === id)?.name || 'Unknown')
+      }));
     }
     throw error;
   }
@@ -28,7 +33,7 @@ export const getAuditCycles = async () => {
  * Initializes a new audit cycle for a specific department.
  * Role Access: Admin, Asset Manager
  */
-export const createAuditCycle = async (cycleData) => {
+export const createAuditCycle = async (cycleData, creatorId) => {
   try {
     const response = await api.post('/audits/', cycleData);
     return response.data;
@@ -36,14 +41,19 @@ export const createAuditCycle = async (cycleData) => {
     console.error("API Error (createAuditCycle), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
+      const deptId = cycleData.departmentId ? parseInt(cycleData.departmentId) : null;
       const newCycle = {
-        ...cycleData,
         id: Date.now(),
+        title: cycleData.title,
+        departmentId: deptId,
+        startDate: cycleData.startDate,
+        endDate: cycleData.endDate,
+        auditorIds: cycleData.auditorIds || [],
         status: 'Active',
         results: []
       };
       mockAuditCycles.push(newCycle);
-      logActivity(`Created Audit Cycle: ${cycleData.title}`);
+      await pushLog(creatorId, `Created new audit cycle: ${newCycle.title}`);
       return newCycle;
     }
     throw error;
@@ -55,7 +65,7 @@ export const createAuditCycle = async (cycleData) => {
  * Submits an audit result for a specific asset (Verified, Missing, Damaged).
  * Role Access: Department Head, Auditor (Employee assigned to audit)
  */
-export const submitAuditResult = async (cycleId, assetId, status) => {
+export const submitAuditResult = async (cycleId, assetId, status, auditorId) => {
   try {
     const response = await api.post(`/audits/${cycleId}/results/`, { assetId, status });
     return response.data;
@@ -79,7 +89,7 @@ export const submitAuditResult = async (cycleId, assetId, status) => {
  * Closes an active audit cycle and locks results.
  * Role Access: Admin, Asset Manager, Department Head
  */
-export const closeAuditCycle = async (cycleId) => {
+export const closeAuditCycle = async (cycleId, closerId) => {
   try {
     const response = await api.post(`/audits/${cycleId}/close/`);
     return response.data;
@@ -87,24 +97,22 @@ export const closeAuditCycle = async (cycleId) => {
     console.error("API Error (closeAuditCycle), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      const cycleIndex = mockAuditCycles.findIndex(c => c.id === cycleId);
-      if (cycleIndex !== -1) {
-        mockAuditCycles[cycleIndex].status = 'Closed';
+      const cycle = mockAuditCycles.find(c => c.id === cycleId);
+      if(cycle) {
+        cycle.status = 'Closed';
         
-        // Sync results to assets
-        const results = mockAuditCycles[cycleIndex].results;
-        results.forEach(res => {
-          const asset = mockAssets.find(a => a.id === res.assetId);
-          if (asset) {
-            if (res.status === 'Missing') {
-              asset.status = 'Missing';
-            } else if (res.status === 'Damaged') {
-              asset.status = 'Under Maintenance'; // Or damaged if we have that state
-            }
-          }
+        // Update asset statuses based on missing/damaged
+        cycle.results.forEach(res => {
+           if (res.status === 'Missing') {
+              const a = mockAssets.find(ass => ass.id === res.assetId);
+              if (a) a.status = 'Lost';
+           } else if (res.status === 'Damaged') {
+              const a = mockAssets.find(ass => ass.id === res.assetId);
+              if (a) a.status = 'Under Maintenance';
+           }
         });
         
-        logActivity(`Closed Audit Cycle: ${mockAuditCycles[cycleIndex].title}`);
+        await pushLog(closerId, `Closed audit cycle: ${cycle.title}`);
       }
       return { success: true };
     }

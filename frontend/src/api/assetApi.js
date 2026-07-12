@@ -1,6 +1,6 @@
 import api from './axios';
 import { mockAssets } from './mockData';
-import { logActivity } from './activityLogApi';
+import { pushLog } from './activityLogApi';
 
 const useMockFallback = true; 
 
@@ -39,12 +39,11 @@ export const registerAsset = async (assetData) => {
       const newAsset = {
         ...assetData,
         id: Date.now(),
-        tag: `AF-${String(mockAssets.length + 1).padStart(4, '0')}`,
-        status: 'Available',
-        assignedTo: null
+        tag: `AF-${Math.floor(1000 + Math.random() * 9000)}`,
+        status: 'Available'
       };
       mockAssets.push(newAsset);
-      logActivity(`Registered new asset: ${newAsset.name} (${newAsset.tag})`);
+      await pushLog(1, `Registered new asset: ${newAsset.name} (${newAsset.tag})`);
       return newAsset;
     }
     throw error;

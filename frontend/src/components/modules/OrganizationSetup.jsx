@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDepartments, getAssetCategories, getEmployees, promoteEmployee, addDepartment, updateDepartment, addAssetCategory, updateAssetCategory } from '../../api/organizationApi';
+import { getDepartments, getAssetCategories, getEmployees, promoteEmployee, addDepartment, updateDepartment, addAssetCategory, updateAssetCategory, addEmployee } from '../../api/organizationApi';
 
 // Custom SVGs
 const BuildingIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>;
@@ -31,8 +31,8 @@ const OrganizationSetup = () => {
     setLoading(false);
   };
 
-  const handlePromote = async (id, newRole) => {
-    const res = await promoteEmployee(id, newRole);
+  const handlePromote = async (id, newRole, adminId) => {
+    const res = await promoteEmployee(id, newRole, adminId);
     if(res.success) {
       setEmployees(employees.map(emp => emp.id === id ? { ...emp, role: newRole } : emp));
       alert(`Role updated successfully to ${newRole}`);
@@ -69,9 +69,9 @@ const OrganizationSetup = () => {
           <div className="flex items-center justify-center h-64 text-slate-400">Loading data...</div>
         ) : (
           <>
-            {activeTab === 'departments' && <DepartmentsTab data={departments} employees={employees} onAdd={async (d) => { await addDepartment(d); fetchData(); }} onUpdate={async (id, d) => { await updateDepartment(id, d); fetchData(); }} />}
-            {activeTab === 'categories' && <CategoriesTab data={categories} onAdd={async (c) => { await addAssetCategory(c); fetchData(); }} onUpdate={async (id, c) => { await updateAssetCategory(id, c); fetchData(); }} />}
-            {activeTab === 'employees' && <EmployeesTab data={employees} onPromote={handlePromote} />}
+            {activeTab === 'departments' && <DepartmentsTab data={departments} onAdd={async (d) => { await addDepartment(d, 1); fetchData(); }} onUpdate={async (id, d) => { await updateDepartment(id, d, 1); fetchData(); }} allEmployees={employees} />}
+            {activeTab === 'categories' && <CategoriesTab data={categories} onAdd={async (c) => { await addAssetCategory(c, 1); fetchData(); }} onUpdate={async (id, c) => { await updateAssetCategory(id, c, 1); fetchData(); }} />}
+            {activeTab === 'employees' && <EmployeesTab data={employees} departments={departments} onPromote={(id, role) => handlePromote(id, role, 1)} onAdd={async (empData) => { await addEmployee(empData, 1); fetchData(); }} />}
           </>
         )}
       </div>
@@ -81,7 +81,7 @@ const OrganizationSetup = () => {
 
 /* --- Tab Content Components --- */
 
-const DepartmentsTab = ({ data, employees, onAdd, onUpdate }) => {
+const DepartmentsTab = ({ data, onAdd, onUpdate, allEmployees }) => {
   const [showModal, setShowModal] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
   
@@ -91,11 +91,16 @@ const DepartmentsTab = ({ data, employees, onAdd, onUpdate }) => {
   const [status, setStatus] = useState('Active');
 
   const openAdd = () => { setEditingDept(null); setName(''); setHeadId(''); setParentId(''); setStatus('Active'); setShowModal(true); };
-  const openEdit = (dept) => { setEditingDept(dept); setName(dept.name); setHeadId(dept.headId || ''); setParentId(dept.parent || ''); setStatus(dept.status); setShowModal(true); };
+  const openEdit = (dept) => { setEditingDept(dept); setName(dept.name); setHeadId(dept.headId || ''); setParentId(dept.parentId || ''); setStatus(dept.status); setShowModal(true); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const payload = { name, headId: headId ? parseInt(headId) : null, parent: parentId ? parseInt(parentId) : null, status };
+    const payload = { 
+      name, 
+      headId: headId ? parseInt(headId) : null, 
+      parentId: parentId ? parseInt(parentId) : null, 
+      status 
+    };
     if(editingDept) {
       onUpdate(editingDept.id, payload);
     } else {
@@ -119,21 +124,17 @@ const DepartmentsTab = ({ data, employees, onAdd, onUpdate }) => {
             <tr>
               <th className="px-6 py-4 font-semibold">Department Name</th>
               <th className="px-6 py-4 font-semibold">Head of Department</th>
+              <th className="px-6 py-4 font-semibold">Parent Dept</th>
               <th className="px-6 py-4 font-semibold">Status</th>
               <th className="px-6 py-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {data.map((dept) => {
-              const headEmp = employees.find(e => e.id === dept.headId);
-              const parentDept = data.find(d => d.id === dept.parent);
-              return (
+            {data.map((dept) => (
               <tr key={dept.id} className="hover:bg-slate-800/20 transition-colors">
-                <td className="px-6 py-4 font-medium text-white">
-                  {dept.name}
-                  {parentDept && <div className="text-xs text-slate-500 font-normal mt-0.5">Sub of: {parentDept.name}</div>}
-                </td>
-                <td className="px-6 py-4">{headEmp ? headEmp.name : <span className="text-slate-500 italic">Unassigned</span>}</td>
+                <td className="px-6 py-4 font-medium text-white">{dept.name}</td>
+                <td className="px-6 py-4">{dept.headName || <span className="text-slate-500 italic">Unassigned</span>}</td>
+                <td className="px-6 py-4">{dept.parentName || <span className="text-slate-500 italic">None</span>}</td>
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${dept.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}`}>
                     {dept.status}
@@ -143,8 +144,7 @@ const DepartmentsTab = ({ data, employees, onAdd, onUpdate }) => {
                   <button onClick={() => openEdit(dept)} className="text-indigo-400 hover:text-indigo-300 font-medium text-sm">Edit</button>
                 </td>
               </tr>
-            );
-            })}
+            ))}
           </tbody>
         </table>
       </div>
@@ -157,10 +157,10 @@ const DepartmentsTab = ({ data, employees, onAdd, onUpdate }) => {
               <input required value={name} onChange={e => setName(e.target.value)} type="text" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Head of Department</label>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Head of Department (Employee)</label>
               <select value={headId} onChange={e => setHeadId(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
                 <option value="">-- Unassigned --</option>
-                {employees.map(emp => (
+                {allEmployees.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.name}</option>
                 ))}
               </select>
@@ -168,8 +168,8 @@ const DepartmentsTab = ({ data, employees, onAdd, onUpdate }) => {
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">Parent Department</label>
               <select value={parentId} onChange={e => setParentId(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
-                <option value="">-- None (Top Level) --</option>
-                {data.filter(d => !editingDept || d.id !== editingDept.id).map(dept => (
+                <option value="">-- None --</option>
+                {data.filter(d => d.id !== editingDept?.id).map(dept => (
                   <option key={dept.id} value={dept.id}>{dept.name}</option>
                 ))}
               </select>
@@ -195,29 +195,18 @@ const CategoriesTab = ({ data, onAdd, onUpdate }) => {
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [name, setName] = useState('');
-  const [attrs, setAttrs] = useState([]);
-  const [newAttr, setNewAttr] = useState('');
+  const [attrs, setAttrs] = useState('');
 
-  const openAdd = () => { setEditingCategory(null); setName(''); setAttrs([]); setNewAttr(''); setShowModal(true); };
-  const openEdit = (cat) => { setEditingCategory(cat); setName(cat.name); setAttrs([...cat.attributes]); setNewAttr(''); setShowModal(true); };
-
-  const handleAddAttr = () => {
-    if (newAttr.trim() && !attrs.includes(newAttr.trim())) {
-      setAttrs([...attrs, newAttr.trim()]);
-      setNewAttr('');
-    }
-  };
-
-  const handleRemoveAttr = (index) => {
-    setAttrs(attrs.filter((_, i) => i !== index));
-  };
+  const openAdd = () => { setEditingCategory(null); setName(''); setAttrs(''); setShowModal(true); };
+  const openEdit = (cat) => { setEditingCategory(cat); setName(cat.name); setAttrs(cat.attributes.join(', ')); setShowModal(true); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const attributes = attrs.split(',').map(a => a.trim()).filter(a => a);
     if(editingCategory) {
-      onUpdate(editingCategory.id, { name, attributes: attrs });
+      onUpdate(editingCategory.id, { name, attributes });
     } else {
-      onAdd({ name, attributes: attrs });
+      onAdd({ name, attributes });
     }
     setShowModal(false);
   };
@@ -262,31 +251,8 @@ const CategoriesTab = ({ data, onAdd, onUpdate }) => {
               <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. Vehicles" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Custom Attributes</label>
-              <div className="flex gap-2 mb-2">
-                <input 
-                  value={newAttr} 
-                  onChange={e => setNewAttr(e.target.value)} 
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddAttr())}
-                  type="text" 
-                  placeholder="e.g. License Plate" 
-                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" 
-                />
-                <button type="button" onClick={handleAddAttr} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 rounded-lg font-semibold">
-                  Add
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {attrs.map((attr, idx) => (
-                  <span key={idx} className="bg-slate-700 flex items-center gap-1 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-slate-600">
-                    {attr}
-                    <button type="button" onClick={() => handleRemoveAttr(idx)} className="text-slate-400 hover:text-red-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
-                  </span>
-                ))}
-                {attrs.length === 0 && <span className="text-slate-500 text-xs italic">No custom attributes added yet.</span>}
-              </div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Custom Attributes (Comma separated)</label>
+              <input value={attrs} onChange={e => setAttrs(e.target.value)} type="text" placeholder="e.g. License Plate, Mileage" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
             </div>
             <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg mt-4">
               {editingCategory ? "Save Changes" : "Create Category"}
@@ -298,26 +264,51 @@ const CategoriesTab = ({ data, onAdd, onUpdate }) => {
   );
 };
 
-const EmployeesTab = ({ data, onPromote }) => {
+const EmployeesTab = ({ data, departments, onPromote, onAdd }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({ name: '', email: '', departmentId: '', role: 'Employee' });
+  const [saving, setSaving] = useState(false);
+
   const filteredData = data.filter(emp => 
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    emp.department.toLowerCase().includes(searchTerm.toLowerCase())
+    (emp.department || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    await onAdd(formData);
+    setSaving(false);
+    setShowModal(false);
+    setFormData({ name: '', email: '', departmentId: '', role: 'Employee' });
+  };
+
+  const roleBadge = (role) => {
+    if (role === 'Admin') return 'bg-red-500/10 text-red-400 border-red-500/20';
+    if (role === 'Department Head') return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    if (role === 'Asset Manager') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    return 'bg-slate-700 text-slate-300 border-slate-600';
+  };
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h3 className="text-xl font-bold text-white">Employee Directory & Roles</h3>
-        <div className="w-full sm:w-auto">
+        <div className="flex gap-3 w-full sm:w-auto">
           <input 
             type="text" 
             placeholder="Search name or dept..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="flex-1 sm:w-56 bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
+          >
+            <PlusIcon /> Add Employee
+          </button>
         </div>
       </div>
       
@@ -328,50 +319,120 @@ const EmployeesTab = ({ data, onPromote }) => {
               <th className="px-6 py-4 font-semibold">Name & Email</th>
               <th className="px-6 py-4 font-semibold">Department</th>
               <th className="px-6 py-4 font-semibold">System Role</th>
-              <th className="px-6 py-4 font-semibold text-right">Promote Role</th>
+              <th className="px-6 py-4 font-semibold">Status</th>
+              <th className="px-6 py-4 font-semibold text-right">Change Role</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
             {filteredData.map((emp) => (
               <tr key={emp.id} className="hover:bg-slate-800/20 transition-colors">
                 <td className="px-6 py-4">
-                  <p className="font-bold text-white">{emp.name}</p>
-                  <p className="text-sm text-slate-500">{emp.email}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold text-sm flex-shrink-0">
+                      {emp.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-white">{emp.name}</p>
+                      <p className="text-xs text-slate-500">{emp.email}</p>
+                    </div>
+                  </div>
                 </td>
-                <td className="px-6 py-4">{emp.department}</td>
+                <td className="px-6 py-4 text-slate-300">{emp.department || <span className="text-slate-500 italic">Unassigned</span>}</td>
                 <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                    emp.role === 'Department Head' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 
-                    emp.role === 'Asset Manager' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
-                    'bg-slate-700 text-slate-300 border-slate-600'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${roleBadge(emp.role)}`}>
                     {emp.role}
                   </span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    emp.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-700 text-slate-400 border-slate-600'
+                  }`}>{emp.status || 'Active'}</span>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <select 
                     className="bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2"
                     value=""
-                    onChange={(e) => {
-                      if (e.target.value) onPromote(emp.id, e.target.value);
-                    }}
+                    onChange={(e) => { if (e.target.value) onPromote(emp.id, e.target.value); }}
                   >
                     <option value="" disabled>Change Role...</option>
                     <option value="Employee">Employee</option>
                     <option value="Asset Manager">Asset Manager</option>
                     <option value="Department Head">Department Head</option>
+                    <option value="Admin">Admin</option>
                   </select>
                 </td>
               </tr>
             ))}
             {filteredData.length === 0 && (
               <tr>
-                <td colSpan="4" className="px-6 py-8 text-center text-slate-500">No employees found.</td>
+                <td colSpan="5" className="px-6 py-12 text-center text-slate-500">No employees found.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {showModal && (
+        <Modal title="Add New Employee" onClose={() => setShowModal(false)}>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Full Name</label>
+              <input
+                required
+                type="text"
+                placeholder="e.g. Rahul Sharma"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Email Address</label>
+              <input
+                required
+                type="email"
+                placeholder="e.g. rahul@company.com"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Department</label>
+              <select
+                value={formData.departmentId}
+                onChange={e => setFormData({ ...formData, departmentId: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="">-- Unassigned --</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">System Role</label>
+              <select
+                value={formData.role}
+                onChange={e => setFormData({ ...formData, role: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="Employee">Employee</option>
+                <option value="Asset Manager">Asset Manager</option>
+                <option value="Department Head">Department Head</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-semibold py-3 rounded-lg mt-2 transition-colors"
+            >
+              {saving ? 'Adding...' : 'Add Employee'}
+            </button>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

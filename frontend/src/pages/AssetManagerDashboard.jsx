@@ -3,13 +3,13 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 
 // Modules
-import DashboardOverview from './modules/DashboardOverview';
-import Assets from './modules/Assets';
-import AllocationTransfer from './modules/AllocationTransfer';
-import Maintenance from './modules/Maintenance';
-import Audit from './modules/Audit';
-import Reports from './modules/Reports';
-import Notifications from './modules/Notifications';
+import DashboardOverview from '../components/modules/DashboardOverview';
+import Assets from '../components/modules/Assets';
+import AllocationTransfer from '../components/modules/AllocationTransfer';
+import Maintenance from '../components/modules/Maintenance';
+import Audit from '../components/modules/Audit';
+import Reports from '../components/modules/Reports';
+import Notifications from '../components/modules/Notifications';
 
 const AssetManagerDashboard = () => {
   const [activeModule, setActiveModule] = useState('Dashboard');

@@ -1,6 +1,6 @@
 import api from './axios';
-import { mockBookings } from './mockData';
-import { logActivity } from './activityLogApi';
+import { mockBookings, mockAssets } from './mockData';
+import { pushLog } from './activityLogApi';
 
 const useMockFallback = true; 
 
@@ -17,7 +17,15 @@ export const getBookings = async () => {
     console.error("API Error (getBookings), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return [...mockBookings];
+      return mockBookings.map(b => {
+         const asset = mockAssets.find(a => a.id === b.assetId);
+         const employee = mockEmployees.find(e => e.id === b.bookedById);
+         return {
+            ...b,
+            assetName: asset ? asset.name : 'Unknown Asset',
+            bookedBy: employee ? employee.name : 'Unknown User'
+         };
+      });
     }
     throw error;
   }
@@ -39,12 +47,11 @@ export const createBooking = async (bookingData) => {
       
       // Basic Overlap validation for mock
       const isOverlap = mockBookings.some(b => 
-        b.assetId.toString() === bookingData.assetId.toString() && 
+        b.assetId === parseInt(bookingData.assetId) && 
         b.date === bookingData.date &&
         b.status !== 'Cancelled' &&
         ((bookingData.startTime >= b.startTime && bookingData.startTime < b.endTime) ||
-         (bookingData.endTime > b.startTime && bookingData.endTime <= b.endTime) ||
-         (bookingData.startTime <= b.startTime && bookingData.endTime >= b.endTime))
+         (bookingData.endTime > b.startTime && bookingData.endTime <= b.endTime))
       );
 
       if(isOverlap) {
@@ -54,10 +61,13 @@ export const createBooking = async (bookingData) => {
       const newBooking = {
         ...bookingData,
         id: Date.now(),
-        status: 'Upcoming' // Later, an auto-transition can move this to Active when time arrives
+        status: 'Upcoming'
       };
       mockBookings.push(newBooking);
-      logActivity(`Created booking for ${bookingData.assetName} by ${bookingData.bookedBy}`);
+      
+      const asset = mockAssets.find(a => a.id === parseInt(bookingData.assetId));
+      await pushLog(bookingData.bookedById, `Booked ${asset?.name} for ${bookingData.date}`);
+      
       return newBooking;
     }
     throw error;
@@ -69,7 +79,7 @@ export const createBooking = async (bookingData) => {
  * Cancels an upcoming booking.
  * Role Access: Employee (own bookings), Admin, Department Head
  */
-export const cancelBooking = async (id) => {
+export const cancelBooking = async (id, userId) => {
   try {
     const response = await api.delete(`/bookings/${id}/`);
     return response.data;
@@ -77,10 +87,11 @@ export const cancelBooking = async (id) => {
     console.error("API Error (cancelBooking), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      const idx = mockBookings.findIndex(b => b.id === id);
-      if (idx !== -1) {
-        mockBookings[idx].status = 'Cancelled';
-        logActivity(`Cancelled booking for ${mockBookings[idx].assetName} by ${mockBookings[idx].bookedBy}`);
+      const booking = mockBookings.find(b => b.id === id);
+      if(booking) {
+        booking.status = 'Cancelled';
+        const asset = mockAssets.find(a => a.id === booking.assetId);
+        await pushLog(userId, `Cancelled booking for ${asset?.name} on ${booking.date}`);
       }
       return { success: true };
     }
