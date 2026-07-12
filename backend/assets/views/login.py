@@ -2,35 +2,21 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import check_password  # <-- Import this!
 import re
 
 from assets.models import Admin, Department, Employee, AssetManager
 
 class RoleBasedLoginView(APIView):
-    """
-    Handles POST requests to /api/<role>/login/ using Custom 12-digit IDs
-    """
     permission_classes = [] 
     authentication_classes = []
 
-    # Map URL roles/prefixes to their exact Django Model
     ROLE_MODEL_MAP = {
         "admin": Admin, "ad": Admin,
         "department": Department, "dp": Department,
         "employee": Employee, "ep": Employee,
         "assetManager": AssetManager, "am": AssetManager
     }
-
-    def post(self, request, role):
-        # 1. Get the ID and password from the request
-        provided_id = request.data.get("id") or request.data.get("username")
-        password = request.data.get("password")
-
-        if not provided_id or not password:
-            return Response(
-                {"error": "Please provide both id and password."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
     def post(self, request, role):
         # 1. Get the ID and password from the request
@@ -60,8 +46,7 @@ class RoleBasedLoginView(APIView):
         
         if not ModelClass:
             return Response({"error": "Invalid login role."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Automatically derive the standard role name (e.g., 'Admin' -> 'admin')
+        
         role_name = ModelClass.__name__.lower()
 
         # 4. Query the exact custom table using the designated Model
@@ -70,24 +55,22 @@ class RoleBasedLoginView(APIView):
         except ModelClass.DoesNotExist:
             return Response({"error": "User with this ID not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 5. Verify the password (TODO: implement password hashing checks)
-        if user_instance.password != password:
+        # 5. Verify the password safely using cryptographic verification
+        if not check_password(password, user_instance.password):
             return Response(
                 {"error": "Invalid password."},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-
-        # 7 Generate Custom JWT Token
+        # 6. Generate Custom JWT Token
         refresh = RefreshToken()
         refresh['user_id'] = user_instance.id
         refresh['role'] = role_name
-        
 
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "role": role_name,
-            "user_id": getattr(user_instance, 'custom_id', user_instance.id), # Fallback to id if custom_id field doesn't exist
+            "user_id": getattr(user_instance, 'custom_id', user_instance.id),
             "name": getattr(user_instance, 'name', 'Unknown')
         }, status=status.HTTP_200_OK)

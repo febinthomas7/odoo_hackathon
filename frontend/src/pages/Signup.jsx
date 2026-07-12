@@ -1,30 +1,41 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { signup } from '../api/authApi';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signup } from "../api/authApi";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSignup = async (e) => {
     e.preventDefault();
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+
+    // Basic validation check before even hitting your backend server
+
     setLoading(true);
     setError(null);
+
+    const id = 123456789012; // Assuming the ID is derived from the email prefix
+
     try {
-      await signup(name, email, password);
-      // On success, redirect to login so they can log in
-      navigate('/', { state: { message: "Account created successfully! Please sign in." } });
+      // PASS PARAMETERS IN CORRECT ORDER: id, name, password, role
+      // Assumes 'employeeId' is a state variable bound to your input form field
+      await signup(id, name, password, "ep");
+
+      navigate("/", {
+        state: { message: "Account created successfully! Please sign in." },
+      });
     } catch (err) {
-      setError(err.message || "Signup failed");
+      setError(err.response?.data?.error || err.message || "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -32,102 +43,126 @@ const Signup = () => {
 
   return (
     <div className="relative flex justify-center items-center min-h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
-      
       {/* Background Decorative Elements */}
       <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-600/30 rounded-full mix-blend-screen filter blur-[128px] animate-blob" />
       <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-indigo-600/30 rounded-full mix-blend-screen filter blur-[128px] animate-blob animation-delay-2000" />
-      
+
       {/* Signup Card (Glassmorphism) */}
       <div className="relative z-10 w-full max-w-[400px] mx-4 px-8 py-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-10 mb-10">
-        
         {/* Header & Logo */}
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex justify-center items-center text-xl font-bold text-white shadow-lg mb-4 ring-2 ring-white/10">
             AF
           </div>
-          <h2 className="text-2xl font-semibold text-white tracking-wide">Create Account</h2>
-          <p className="text-slate-400 text-sm mt-1">Join AssetFlow as an employee</p>
+          <h2 className="text-2xl font-semibold text-white tracking-wide">
+            Create Account
+          </h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Join AssetFlow as an employee
+          </p>
         </div>
 
-        {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg mb-4">{error}</div>}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
 
         <form className="flex flex-col gap-4" onSubmit={handleSignup}>
-          
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="name" className="text-sm font-medium text-slate-300">Full Name</label>
-            <input 
-              type="text" 
-              id="name" 
+            <label
+              htmlFor="name"
+              className="text-sm font-medium text-slate-300"
+            >
+              Full Name
+            </label>
+            <input
+              type="text"
+              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe" 
+              placeholder="John Doe"
               className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
-              required 
+              required
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-sm font-medium text-slate-300">Email Address</label>
-            <input 
-              type="email" 
-              id="email" 
+            <label
+              htmlFor="email"
+              className="text-sm font-medium text-slate-300"
+            >
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com" 
+              placeholder="name@company.com"
               className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
-              required 
+              required
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-sm font-medium text-slate-300">Password</label>
-            <input 
-              type="password" 
-              id="password" 
+            <label
+              htmlFor="password"
+              className="text-sm font-medium text-slate-300"
+            >
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" 
+              placeholder="••••••••"
               className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
-              required 
+              required
               minLength={6}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="confirmPassword" className="text-sm font-medium text-slate-300">Confirm Password</label>
-            <input 
-              type="password" 
-              id="confirmPassword" 
+            <label
+              htmlFor="confirmPassword"
+              className="text-sm font-medium text-slate-300"
+            >
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••" 
+              placeholder="••••••••"
               className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
-              required 
+              required
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="mt-2 w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-medium py-3 rounded-lg text-base shadow-lg shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50"
           >
-            {loading ? 'Creating...' : 'Create Account'}
+            {loading ? "Creating..." : "Create Account"}
           </button>
         </form>
 
         <div className="mt-5 text-center">
           <p className="text-sm text-slate-400">
-            Already have an account?{' '}
-            <button 
+            Already have an account?{" "}
+            <button
               type="button"
-              onClick={() => navigate('/')} 
+              onClick={() => navigate("/")}
               className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
             >
               Sign In
             </button>
           </p>
         </div>
-
       </div>
     </div>
   );
