@@ -3,6 +3,11 @@ import { mockReportsData } from './mockData';
 
 const useMockFallback = true; 
 
+/**
+ * GET /reports/
+ * Retrieves analytic data for reports (utilization, maintenance, allocation).
+ * Role Access: Admin, Asset Manager, Department Head (department-filtered data)
+ */
 export const getReportsData = async () => {
   try {
     const response = await api.get('/reports/');

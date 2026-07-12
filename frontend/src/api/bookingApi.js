@@ -5,6 +5,11 @@ const useMockFallback = true;
 
 let localBookings = [...mockBookings];
 
+/**
+ * GET /bookings/
+ * Retrieves all resource bookings.
+ * Role Access: Admin, Asset Manager, Department Head (dept resources), Employee (personal bookings)
+ */
 export const getBookings = async () => {
   try {
     const response = await api.get('/bookings/');
@@ -19,6 +24,11 @@ export const getBookings = async () => {
   }
 };
 
+/**
+ * POST /bookings/
+ * Creates a new booking for a shared resource.
+ * Role Access: Employee, Department Head, Admin
+ */
 export const createBooking = async (bookingData) => {
   try {
     const response = await api.post('/bookings/', bookingData);
@@ -28,23 +38,23 @@ export const createBooking = async (bookingData) => {
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Overlap Validation
-      const hasOverlap = localBookings.some(b => {
-        if (b.assetId.toString() !== bookingData.assetId.toString() || b.date !== bookingData.date || b.status === 'Cancelled') {
-          return false;
-        }
-        // Check time overlap
-        return (bookingData.startTime < b.endTime && bookingData.endTime > b.startTime);
-      });
+      // Basic Overlap validation for mock
+      const isOverlap = localBookings.some(b => 
+        b.assetId === parseInt(bookingData.assetId) && 
+        b.date === bookingData.date &&
+        b.status !== 'Cancelled' &&
+        ((bookingData.startTime >= b.startTime && bookingData.startTime < b.endTime) ||
+         (bookingData.endTime > b.startTime && bookingData.endTime <= b.endTime))
+      );
 
-      if (hasOverlap) {
+      if(isOverlap) {
         throw new Error("This resource is already booked for the selected time slot.");
       }
 
       const newBooking = {
         ...bookingData,
         id: Date.now(),
-        status: 'Upcoming',
+        status: 'Upcoming'
       };
       localBookings.push(newBooking);
       return newBooking;
@@ -53,15 +63,20 @@ export const createBooking = async (bookingData) => {
   }
 };
 
-export const cancelBooking = async (bookingId) => {
+/**
+ * DELETE /bookings/:id
+ * Cancels an upcoming booking.
+ * Role Access: Employee (own bookings), Admin, Department Head
+ */
+export const cancelBooking = async (id) => {
   try {
-    const response = await api.post(`/bookings/${bookingId}/cancel/`);
+    const response = await api.delete(`/bookings/${id}/`);
     return response.data;
   } catch (error) {
     console.error("API Error (cancelBooking), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      localBookings = localBookings.map(b => b.id === bookingId ? { ...b, status: 'Cancelled' } : b);
+      localBookings = localBookings.map(b => b.id === id ? { ...b, status: 'Cancelled' } : b);
       return { success: true };
     }
     throw error;

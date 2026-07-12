@@ -69,7 +69,7 @@ const OrganizationSetup = () => {
           <div className="flex items-center justify-center h-64 text-slate-400">Loading data...</div>
         ) : (
           <>
-            {activeTab === 'departments' && <DepartmentsTab data={departments} onAdd={async (d) => { await addDepartment(d); fetchData(); }} onUpdate={async (id, d) => { await updateDepartment(id, d); fetchData(); }} />}
+            {activeTab === 'departments' && <DepartmentsTab data={departments} employees={employees} onAdd={async (d) => { await addDepartment(d); fetchData(); }} onUpdate={async (id, d) => { await updateDepartment(id, d); fetchData(); }} />}
             {activeTab === 'categories' && <CategoriesTab data={categories} onAdd={async (c) => { await addAssetCategory(c); fetchData(); }} onUpdate={async (id, c) => { await updateAssetCategory(id, c); fetchData(); }} />}
             {activeTab === 'employees' && <EmployeesTab data={employees} onPromote={handlePromote} />}
           </>
@@ -81,23 +81,25 @@ const OrganizationSetup = () => {
 
 /* --- Tab Content Components --- */
 
-const DepartmentsTab = ({ data, onAdd, onUpdate }) => {
+const DepartmentsTab = ({ data, employees, onAdd, onUpdate }) => {
   const [showModal, setShowModal] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
   
   const [name, setName] = useState('');
-  const [head, setHead] = useState('');
+  const [headId, setHeadId] = useState('');
+  const [parentId, setParentId] = useState('');
   const [status, setStatus] = useState('Active');
 
-  const openAdd = () => { setEditingDept(null); setName(''); setHead(''); setStatus('Active'); setShowModal(true); };
-  const openEdit = (dept) => { setEditingDept(dept); setName(dept.name); setHead(dept.head || ''); setStatus(dept.status); setShowModal(true); };
+  const openAdd = () => { setEditingDept(null); setName(''); setHeadId(''); setParentId(''); setStatus('Active'); setShowModal(true); };
+  const openEdit = (dept) => { setEditingDept(dept); setName(dept.name); setHeadId(dept.headId || ''); setParentId(dept.parent || ''); setStatus(dept.status); setShowModal(true); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const payload = { name, headId: headId ? parseInt(headId) : null, parent: parentId ? parseInt(parentId) : null, status };
     if(editingDept) {
-      onUpdate(editingDept.id, { name, head, status });
+      onUpdate(editingDept.id, payload);
     } else {
-      onAdd({ name, head, parent: null, status });
+      onAdd(payload);
     }
     setShowModal(false);
   };
@@ -122,10 +124,16 @@ const DepartmentsTab = ({ data, onAdd, onUpdate }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {data.map((dept) => (
+            {data.map((dept) => {
+              const headEmp = employees.find(e => e.id === dept.headId);
+              const parentDept = data.find(d => d.id === dept.parent);
+              return (
               <tr key={dept.id} className="hover:bg-slate-800/20 transition-colors">
-                <td className="px-6 py-4 font-medium text-white">{dept.name}</td>
-                <td className="px-6 py-4">{dept.head || <span className="text-slate-500 italic">Unassigned</span>}</td>
+                <td className="px-6 py-4 font-medium text-white">
+                  {dept.name}
+                  {parentDept && <div className="text-xs text-slate-500 font-normal mt-0.5">Sub of: {parentDept.name}</div>}
+                </td>
+                <td className="px-6 py-4">{headEmp ? headEmp.name : <span className="text-slate-500 italic">Unassigned</span>}</td>
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${dept.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}`}>
                     {dept.status}
@@ -135,7 +143,8 @@ const DepartmentsTab = ({ data, onAdd, onUpdate }) => {
                   <button onClick={() => openEdit(dept)} className="text-indigo-400 hover:text-indigo-300 font-medium text-sm">Edit</button>
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
@@ -149,7 +158,21 @@ const DepartmentsTab = ({ data, onAdd, onUpdate }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">Head of Department</label>
-              <input value={head} onChange={e => setHead(e.target.value)} type="text" placeholder="e.g. John Doe" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
+              <select value={headId} onChange={e => setHeadId(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
+                <option value="">-- Unassigned --</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Parent Department</label>
+              <select value={parentId} onChange={e => setParentId(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
+                <option value="">-- None (Top Level) --</option>
+                {data.filter(d => !editingDept || d.id !== editingDept.id).map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">Status</label>
@@ -172,18 +195,29 @@ const CategoriesTab = ({ data, onAdd, onUpdate }) => {
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [name, setName] = useState('');
-  const [attrs, setAttrs] = useState('');
+  const [attrs, setAttrs] = useState([]);
+  const [newAttr, setNewAttr] = useState('');
 
-  const openAdd = () => { setEditingCategory(null); setName(''); setAttrs(''); setShowModal(true); };
-  const openEdit = (cat) => { setEditingCategory(cat); setName(cat.name); setAttrs(cat.attributes.join(', ')); setShowModal(true); };
+  const openAdd = () => { setEditingCategory(null); setName(''); setAttrs([]); setNewAttr(''); setShowModal(true); };
+  const openEdit = (cat) => { setEditingCategory(cat); setName(cat.name); setAttrs([...cat.attributes]); setNewAttr(''); setShowModal(true); };
+
+  const handleAddAttr = () => {
+    if (newAttr.trim() && !attrs.includes(newAttr.trim())) {
+      setAttrs([...attrs, newAttr.trim()]);
+      setNewAttr('');
+    }
+  };
+
+  const handleRemoveAttr = (index) => {
+    setAttrs(attrs.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const attributes = attrs.split(',').map(a => a.trim()).filter(a => a);
     if(editingCategory) {
-      onUpdate(editingCategory.id, { name, attributes });
+      onUpdate(editingCategory.id, { name, attributes: attrs });
     } else {
-      onAdd({ name, attributes });
+      onAdd({ name, attributes: attrs });
     }
     setShowModal(false);
   };
@@ -228,8 +262,31 @@ const CategoriesTab = ({ data, onAdd, onUpdate }) => {
               <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. Vehicles" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Custom Attributes (Comma separated)</label>
-              <input value={attrs} onChange={e => setAttrs(e.target.value)} type="text" placeholder="e.g. License Plate, Mileage" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
+              <label className="block text-sm font-medium text-slate-400 mb-1">Custom Attributes</label>
+              <div className="flex gap-2 mb-2">
+                <input 
+                  value={newAttr} 
+                  onChange={e => setNewAttr(e.target.value)} 
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddAttr())}
+                  type="text" 
+                  placeholder="e.g. License Plate" 
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" 
+                />
+                <button type="button" onClick={handleAddAttr} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 rounded-lg font-semibold">
+                  Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {attrs.map((attr, idx) => (
+                  <span key={idx} className="bg-slate-700 flex items-center gap-1 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-slate-600">
+                    {attr}
+                    <button type="button" onClick={() => handleRemoveAttr(idx)} className="text-slate-400 hover:text-red-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </span>
+                ))}
+                {attrs.length === 0 && <span className="text-slate-500 text-xs italic">No custom attributes added yet.</span>}
+              </div>
             </div>
             <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg mt-4">
               {editingCategory ? "Save Changes" : "Create Category"}

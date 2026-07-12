@@ -5,6 +5,11 @@ const useMockFallback = true;
 
 let localRequests = [...mockMaintenanceRequests];
 
+/**
+ * GET /maintenance/
+ * Retrieves maintenance requests.
+ * Role Access: Admin, Asset Manager, Department Head (dept only), Employee (own requests)
+ */
 export const getMaintenanceRequests = async () => {
   try {
     const response = await api.get('/maintenance/');
@@ -19,6 +24,11 @@ export const getMaintenanceRequests = async () => {
   }
 };
 
+/**
+ * POST /maintenance/
+ * Raises a new maintenance/repair request.
+ * Role Access: Employee, Department Head
+ */
 export const raiseRequest = async (requestData) => {
   try {
     const response = await api.post('/maintenance/', requestData);
@@ -41,6 +51,11 @@ export const raiseRequest = async (requestData) => {
   }
 };
 
+/**
+ * PATCH /maintenance/:id
+ * Updates request status and assigns technicians.
+ * Role Access: Admin, Asset Manager, Department Head
+ */
 export const updateRequestStatus = async (requestId, updates) => {
   try {
     const response = await api.patch(`/maintenance/${requestId}/`, updates);
