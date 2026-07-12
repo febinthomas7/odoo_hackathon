@@ -3,12 +3,12 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 
 // Modules
-import DashboardOverview from '../components/modules/DashboardOverview';
-import Assets from '../components/modules/Assets';
-import AllocationTransfer from '../components/modules/AllocationTransfer';
-import ResourceBooking from '../components/modules/ResourceBooking';
-import Reports from '../components/modules/Reports';
-import Notifications from '../components/modules/Notifications';
+import DashboardOverview from './modules/DashboardOverview';
+import Assets from './modules/Assets';
+import AllocationTransfer from './modules/AllocationTransfer';
+import ResourceBooking from './modules/ResourceBooking';
+import Reports from './modules/Reports';
+import Notifications from './modules/Notifications';
 
 const DepartmentHeadDashboard = () => {
   const [activeModule, setActiveModule] = useState('Dashboard');
@@ -25,7 +25,7 @@ const DepartmentHeadDashboard = () => {
   const renderModule = () => {
     switch (activeModule) {
       case 'Dashboard':
-        return <DashboardOverview role="Department Head" />;
+        return <DashboardOverview />;
       case 'Assets':
         return <Assets />;
       case 'Allocation & Transfer':

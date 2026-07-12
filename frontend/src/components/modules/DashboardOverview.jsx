@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getDashboardData } from '../../api/dashboardApi';
+import { getSession } from '../../utils/session';
 
 // Custom SVG Icons
 const AlertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
@@ -7,9 +9,12 @@ const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height
 const BookIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>;
 const ToolIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;
 
-const DashboardOverview = ({ role = 'Admin' }) => {
-  // Use passed role directly instead of simulator
-  const user = { name: 'Current User', role: role, departmentId: role === 'Department Head' || role === 'Employee' ? 'IT Support' : null };
+const DashboardOverview = () => {
+  const navigate = useNavigate();
+  const session = getSession();
+  const userRole = session?.role || 'Admin';
+
+  const user = { name: session?.name || 'Current User', role: userRole, departmentId: session?.departmentId };
 
   // Data state
   const [data, setData] = useState(null);
@@ -33,9 +38,9 @@ const DashboardOverview = ({ role = 'Admin' }) => {
   // Derive UI permissions
   const isManagerial = ['Admin', 'Asset Manager', 'Department Head'].includes(user.role);
   const isDeptHead = user.role === 'Department Head';
-  const canRegisterAsset = user.role === 'Asset Manager';
-  const canBookResource = ['Employee', 'Department Head'].includes(user.role);
-  const canRaiseMaintenance = user.role === 'Employee';
+  const canRegisterAsset = ['Admin', 'Asset Manager'].includes(user.role);
+  const canBookResource = ['Employee', 'Department Head', 'Admin', 'Asset Manager'].includes(user.role);
+  const canRaiseMaintenance = ['Employee', 'Department Head', 'Admin', 'Asset Manager'].includes(user.role);
 
   return (
     <div className="w-full max-w-5xl">
@@ -50,13 +55,13 @@ const DashboardOverview = ({ role = 'Admin' }) => {
       {(canRegisterAsset || canBookResource || canRaiseMaintenance) && (
         <div className="flex flex-wrap gap-4 mb-8">
           {canRegisterAsset && (
-            <ActionButton icon={<PlusIcon />} label="Register Asset" color="indigo" />
+            <ActionButton icon={<PlusIcon />} label="Register Asset" color="indigo" onClick={() => navigate('/assets')} />
           )}
           {canBookResource && (
-            <ActionButton icon={<BookIcon />} label="Book Resource" color="emerald" />
+            <ActionButton icon={<BookIcon />} label="Book Resource" color="emerald" onClick={() => navigate('/booking')} />
           )}
           {canRaiseMaintenance && (
-            <ActionButton icon={<ToolIcon />} label="Raise Maintenance Request" color="orange" />
+            <ActionButton icon={<ToolIcon />} label="Raise Maintenance Request" color="orange" onClick={() => navigate('/maintenance')} />
           )}
         </div>
       )}
@@ -195,14 +200,14 @@ const KPICard = ({ title, value }) => (
   </div>
 );
 
-const ActionButton = ({ icon, label, color }) => {
+const ActionButton = ({ icon, label, color, onClick }) => {
   const colorClasses = {
     indigo: 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border-indigo-500/20',
     emerald: 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20',
     orange: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border-orange-500/20',
   };
   return (
-    <button className={`flex items-center gap-2 border px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${colorClasses[color]}`}>
+    <button onClick={onClick} className={`flex items-center gap-2 border px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${colorClasses[color]}`}>
       {icon} {label}
     </button>
   );

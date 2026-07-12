@@ -4,6 +4,7 @@ import { getAssets } from '../../api/assetApi';
 import { getDepartments, getEmployees } from '../../api/organizationApi';
 
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
+const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
 
 const Audit = () => {
   const [cycles, setCycles] = useState([]);
@@ -71,19 +72,21 @@ const Audit = () => {
               <p className="text-slate-500 col-span-3">No audit cycles found.</p>
             ) : (
               cycles.map(cycle => (
-                <div key={cycle.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
-                  <div className="flex justify-between items-start mb-3">
-                    <h4 className="font-bold text-lg text-white">{cycle.title}</h4>
-                    <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      cycle.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-300'
-                    }`}>
-                      {cycle.status}
-                    </span>
-                  </div>
-                  <div className="space-y-2 mb-6">
-                    <p className="text-sm text-slate-400"><span className="text-slate-500 font-medium">Target:</span> {cycle.department}</p>
-                    <p className="text-sm text-slate-400"><span className="text-slate-500 font-medium">Timeline:</span> {cycle.startDate} to {cycle.endDate}</p>
-                    <p className="text-sm text-slate-400"><span className="text-slate-500 font-medium">Auditors:</span> {cycle.auditors.join(', ')}</p>
+                <div key={cycle.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:border-indigo-500/30 transition-colors flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-bold text-lg text-white">{cycle.title}</h4>
+                      <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        cycle.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-300'
+                      }`}>
+                        {cycle.status}
+                      </span>
+                    </div>
+                    <div className="space-y-2 mb-6">
+                      <p className="text-sm text-slate-400"><span className="text-slate-500 font-medium">Target:</span> {cycle.department}</p>
+                      <p className="text-sm text-slate-400"><span className="text-slate-500 font-medium">Timeline:</span> {cycle.startDate} to {cycle.endDate}</p>
+                      <p className="text-sm text-slate-400"><span className="text-slate-500 font-medium">Auditors:</span> {cycle.auditors.join(', ')}</p>
+                    </div>
                   </div>
                   <button onClick={() => setSelectedCycle(cycle)} className="w-full bg-slate-700/50 hover:bg-slate-700 text-indigo-300 font-semibold py-2.5 rounded-lg transition-colors border border-slate-600/50">
                     {cycle.status === 'Active' ? 'Run Audit' : 'View Report'}
@@ -108,8 +111,8 @@ const Audit = () => {
 };
 
 const ActiveAuditView = ({ cycle, assets, onBack, onRefresh }) => {
-  // Filter assets that belong to the department being audited
   const targetAssets = assets.filter(a => a.department === cycle.department);
+  const isClosed = cycle.status === 'Closed';
   
   const handleMark = async (assetId, status) => {
     await submitAuditResult(cycle.id, assetId, status);
@@ -117,30 +120,42 @@ const ActiveAuditView = ({ cycle, assets, onBack, onRefresh }) => {
   };
 
   const handleClose = async () => {
-    if(window.confirm('Are you sure you want to close this audit cycle? This will lock the results.')) {
+    if(window.confirm('Are you sure you want to close this audit cycle? This will lock the results and flag missing/damaged assets.')) {
       await closeAuditCycle(cycle.id);
       onBack();
     }
   };
 
-  const isClosed = cycle.status === 'Closed';
+  const missingOrDamagedCount = cycle.results.filter(r => r.status === 'Missing' || r.status === 'Damaged').length;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20 min-h-[500px]">
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 border-b border-slate-800 pb-6">
         <button onClick={onBack} className="text-slate-400 hover:text-white p-2 bg-slate-800 rounded-lg">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            {cycle.title}
-            <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${
-              isClosed ? 'bg-slate-700 text-slate-300' : 'bg-emerald-500/20 text-emerald-400'
-            }`}>
-              {cycle.status}
-            </span>
-          </h2>
-          <p className="text-sm text-slate-400">Auditing {cycle.department} assets.</p>
+        <div className="flex-1">
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                {cycle.title}
+                <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${
+                  isClosed ? 'bg-slate-700 text-slate-300' : 'bg-emerald-500/20 text-emerald-400'
+                }`}>
+                  {cycle.status}
+                </span>
+              </h2>
+              <p className="text-sm text-slate-400 mt-1">Auditing {cycle.department} assets.</p>
+            </div>
+            {isClosed && (
+              <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 text-right">
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Discrepancy Report</p>
+                <p className={`text-xl font-bold ${missingOrDamagedCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {missingOrDamagedCount} <span className="text-sm font-normal text-slate-400">Issues Found</span>
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -161,13 +176,15 @@ const ActiveAuditView = ({ cycle, assets, onBack, onRefresh }) => {
             ) : (
               targetAssets.map(asset => {
                 const result = cycle.results.find(r => r.assetId === asset.id);
-                const currentMark = result ? result.status : 'Pending';
+                const currentMark = result ? result.status : (isClosed ? 'Unverified' : 'Pending');
                 
                 return (
-                  <tr key={asset.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs">{asset.tag}</td>
+                  <tr key={asset.id} className={`hover:bg-slate-800/30 transition-colors ${
+                    isClosed && (currentMark === 'Missing' || currentMark === 'Damaged') ? 'bg-red-500/5' : ''
+                  }`}>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-400">{asset.tag}</td>
                     <td className="px-6 py-4 font-bold text-white">{asset.name}</td>
-                    <td className="px-6 py-4 text-sm">{asset.location}</td>
+                    <td className="px-6 py-4 text-sm text-indigo-300">{asset.location || 'N/A'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
                         currentMark === 'Verified' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
@@ -180,9 +197,9 @@ const ActiveAuditView = ({ cycle, assets, onBack, onRefresh }) => {
                     </td>
                     {!isClosed && (
                       <td className="px-6 py-4 text-right space-x-2">
-                        <button onClick={() => handleMark(asset.id, 'Verified')} className="text-emerald-400 hover:bg-emerald-500/10 p-2 rounded transition-colors" title="Verified">✓</button>
-                        <button onClick={() => handleMark(asset.id, 'Damaged')} className="text-orange-400 hover:bg-orange-500/10 p-2 rounded transition-colors" title="Damaged">⚠</button>
-                        <button onClick={() => handleMark(asset.id, 'Missing')} className="text-red-400 hover:bg-red-500/10 p-2 rounded transition-colors" title="Missing">✗</button>
+                        <button onClick={() => handleMark(asset.id, 'Verified')} className={`p-2 rounded transition-colors ${currentMark === 'Verified' ? 'bg-emerald-500/20 text-emerald-400' : 'text-emerald-400 hover:bg-emerald-500/10'}`} title="Verified">✓</button>
+                        <button onClick={() => handleMark(asset.id, 'Damaged')} className={`p-2 rounded transition-colors ${currentMark === 'Damaged' ? 'bg-orange-500/20 text-orange-400' : 'text-orange-400 hover:bg-orange-500/10'}`} title="Damaged">⚠</button>
+                        <button onClick={() => handleMark(asset.id, 'Missing')} className={`p-2 rounded transition-colors ${currentMark === 'Missing' ? 'bg-red-500/20 text-red-400' : 'text-red-400 hover:bg-red-500/10'}`} title="Missing">✗</button>
                       </td>
                     )}
                   </tr>
@@ -194,9 +211,9 @@ const ActiveAuditView = ({ cycle, assets, onBack, onRefresh }) => {
       </div>
 
       {!isClosed && (
-        <div className="flex justify-end">
-          <button onClick={handleClose} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg shadow-indigo-900/20">
-            Complete & Close Audit Cycle
+        <div className="flex justify-end pt-4 border-t border-slate-800">
+          <button onClick={handleClose} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg shadow-indigo-900/20 flex items-center gap-2">
+            <CheckIcon /> Complete & Close Audit Cycle
           </button>
         </div>
       )}
@@ -206,14 +223,23 @@ const ActiveAuditView = ({ cycle, assets, onBack, onRefresh }) => {
 
 const CreateCycleModal = ({ departments, employees, onClose, onComplete }) => {
   const [formData, setFormData] = useState({ title: '', department: '', startDate: '', endDate: '', auditors: [] });
-  const [auditorInput, setAuditorInput] = useState('');
+  
+  const handleAuditorToggle = (empName) => {
+    setFormData(prev => {
+      const auditors = prev.auditors.includes(empName)
+        ? prev.auditors.filter(a => a !== empName)
+        : [...prev.auditors, empName];
+      return { ...prev, auditors };
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await createAuditCycle({
-      ...formData,
-      auditors: [auditorInput] // Simplified for mock
-    });
+    if(formData.auditors.length === 0) {
+      alert("Please assign at least one auditor.");
+      return;
+    }
+    await createAuditCycle(formData);
     onComplete();
     onClose();
   };
@@ -243,11 +269,20 @@ const CreateCycleModal = ({ departments, employees, onClose, onComplete }) => {
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Assign Primary Auditor</label>
-          <select required value={auditorInput} onChange={e => setAuditorInput(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
-            <option value="">Select Employee...</option>
-            {employees.map(emp => <option key={emp.id} value={emp.name}>{emp.name}</option>)}
-          </select>
+          <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Assign Auditors</label>
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+            {employees.map(emp => (
+              <label key={emp.id} className="flex items-center gap-3 cursor-pointer p-1 hover:bg-slate-700/50 rounded">
+                <input 
+                  type="checkbox" 
+                  checked={formData.auditors.includes(emp.name)} 
+                  onChange={() => handleAuditorToggle(emp.name)}
+                  className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900" 
+                />
+                <span className="text-sm text-slate-300 font-medium">{emp.name} <span className="text-xs text-slate-500">({emp.department})</span></span>
+              </label>
+            ))}
+          </div>
         </div>
         <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg mt-6 shadow-lg shadow-indigo-900/20 transition-colors">
           Initialize Cycle
@@ -257,7 +292,6 @@ const CreateCycleModal = ({ departments, employees, onClose, onComplete }) => {
   );
 };
 
-// Reusable Modal Component
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">

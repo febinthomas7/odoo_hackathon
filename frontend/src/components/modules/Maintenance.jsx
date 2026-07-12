@@ -123,35 +123,38 @@ const Maintenance = () => {
 const RequestModal = ({ request, assets, employees, onClose, onComplete }) => {
   const isEdit = !!request;
   const [formData, setFormData] = useState(
-    request || { assetId: '', reportedBy: '', issue: '', priority: 'Medium' }
+    request || { assetId: '', reportedBy: '', issue: '', priority: 'Medium', technician: '' }
   );
 
-  const handleSubmit = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if(isEdit) {
-      await updateRequestStatus(request.id, {
-        status: formData.status,
-        technician: formData.technician,
-        priority: formData.priority,
-        issue: formData.issue
-      });
-    } else {
-      const selectedAsset = assets.find(a => a.id.toString() === formData.assetId);
-      await raiseRequest({
-        ...formData,
-        assetName: selectedAsset.name
-      });
-    }
+    const selectedAsset = assets.find(a => a.id.toString() === formData.assetId);
+    await raiseRequest({
+      ...formData,
+      assetName: selectedAsset.name
+    });
+    onComplete();
+    onClose();
+  };
+
+  const handleUpdate = async (statusOverride = null) => {
+    const newStatus = statusOverride || request.status;
+    await updateRequestStatus(request.id, {
+      status: newStatus,
+      technician: formData.technician,
+      priority: formData.priority,
+      issue: formData.issue
+    });
     onComplete();
     onClose();
   };
 
   return (
-    <Modal title={isEdit ? "Update Maintenance Request" : "Raise Maintenance Request"} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal title={isEdit ? "Manage Maintenance Request" : "Raise Maintenance Request"} onClose={onClose}>
+      <div className="space-y-4">
         
         {!isEdit && (
-          <>
+          <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Select Asset</label>
               <select required value={formData.assetId} onChange={e => setFormData({...formData, assetId: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
@@ -166,52 +169,106 @@ const RequestModal = ({ request, assets, employees, onClose, onComplete }) => {
                 {employees.map(emp => <option key={emp.id} value={emp.name}>{emp.name}</option>)}
               </select>
             </div>
-          </>
-        )}
-
-        {isEdit && (
-          <div className="bg-slate-800/50 p-4 rounded-lg mb-4 border border-slate-700">
-            <p className="text-sm text-slate-300">Asset: <span className="font-bold text-white">{request.assetName}</span></p>
-            <p className="text-sm text-slate-300">Reported by: <span className="font-medium text-white">{request.reportedBy}</span> on {request.date}</p>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
-          <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
-            <option>Low</option>
-            <option>Medium</option>
-            <option>High</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Issue Description</label>
-          <textarea required rows="3" value={formData.issue} onChange={e => setFormData({...formData, issue: e.target.value})} placeholder="Describe the issue..." className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500"></textarea>
-        </div>
-
-        {isEdit && (
-          <>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Update Status (Manager/Tech Only)</label>
-              <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
-                <option>Pending</option>
-                <option>Approved</option>
-                <option>In Progress</option>
-                <option>Resolved</option>
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
+              <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Assign Technician</label>
-              <input type="text" value={formData.technician || ''} onChange={e => setFormData({...formData, technician: e.target.value})} placeholder="e.g. Mike Mechanic" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Issue Description</label>
+              <textarea required rows="3" value={formData.issue} onChange={e => setFormData({...formData, issue: e.target.value})} placeholder="Describe the issue..." className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500"></textarea>
             </div>
-          </>
+            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg mt-6 shadow-lg shadow-indigo-900/20 transition-colors">
+              Submit Request
+            </button>
+          </form>
         )}
 
-        <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg mt-6 shadow-lg shadow-indigo-900/20 transition-colors">
-          {isEdit ? "Update Request" : "Submit Request"}
-        </button>
-      </form>
+        {isEdit && (
+          <div className="space-y-4">
+            <div className="bg-slate-800/50 p-4 rounded-lg mb-4 border border-slate-700">
+              <p className="text-sm text-slate-300">Asset: <span className="font-bold text-white">{request.assetName}</span></p>
+              <p className="text-sm text-slate-300">Reported by: <span className="font-medium text-white">{request.reportedBy}</span> on {request.date}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-sm text-slate-300">Status:</span>
+                <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${
+                  request.status === 'Resolved' ? 'bg-emerald-500/20 text-emerald-400' :
+                  request.status === 'Pending' ? 'bg-orange-500/20 text-orange-400' :
+                  'bg-blue-500/20 text-blue-400'
+                }`}>{request.status}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
+              <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500">
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Issue Description</label>
+              <textarea required rows="3" value={formData.issue} onChange={e => setFormData({...formData, issue: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500"></textarea>
+            </div>
+
+            {request.status === 'Approved' && (
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Assign Technician</label>
+                <input type="text" value={formData.technician || ''} onChange={e => setFormData({...formData, technician: e.target.value})} placeholder="e.g. Mike Mechanic" className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500" />
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-slate-700/50 grid grid-cols-2 gap-3 mt-4">
+              {request.status === 'Pending' && (
+                <>
+                  <button onClick={() => handleUpdate('Rejected')} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold py-2 rounded-lg transition-colors">
+                    Reject Request
+                  </button>
+                  <button onClick={() => handleUpdate('Approved')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg shadow-lg shadow-emerald-900/20 transition-colors">
+                    Approve
+                  </button>
+                </>
+              )}
+              {request.status === 'Approved' && (
+                <>
+                  <button onClick={() => handleUpdate('Pending')} className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                    Back to Pending
+                  </button>
+                  <button onClick={() => handleUpdate('In Progress')} disabled={!formData.technician} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2 rounded-lg shadow-lg shadow-indigo-900/20 transition-colors">
+                    Start Progress
+                  </button>
+                </>
+              )}
+              {request.status === 'In Progress' && (
+                <>
+                  <button onClick={() => handleUpdate('Approved')} className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                    Cancel Progress
+                  </button>
+                  <button onClick={() => handleUpdate('Resolved')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg shadow-lg shadow-emerald-900/20 transition-colors">
+                    Mark Resolved
+                  </button>
+                </>
+              )}
+              {request.status === 'Resolved' && (
+                <div className="col-span-2 text-center text-emerald-400 text-sm font-medium py-2">
+                  This request has been resolved.
+                </div>
+              )}
+            </div>
+            {/* If just updating details without changing state */}
+            {request.status !== 'Resolved' && (
+              <button onClick={() => handleUpdate()} className="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-2 rounded-lg mt-2 transition-colors">
+                Save Details Only
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </Modal>
   );
 };

@@ -125,17 +125,22 @@ const AllocationsTab = ({ data, onOpenAllocate, onOpenReturn, onOpenTransfer }) 
             {activeOnly.length === 0 ? (
               <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-500">No active allocations.</td></tr>
             ) : (
-              activeOnly.map((alloc) => (
+              activeOnly.map((alloc) => {
+                const isOverdue = alloc.expectedReturnDate && new Date(alloc.expectedReturnDate) < new Date();
+                return (
                 <tr key={alloc.id} className="hover:bg-slate-800/20 transition-colors">
                   <td className="px-6 py-4">
-                    <p className="font-bold text-white">{alloc.assetName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-white">{alloc.assetName}</p>
+                      {isOverdue && <span className="bg-red-500/20 text-red-400 text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">Overdue</span>}
+                    </div>
                     <p className="text-xs text-slate-500">{alloc.assetTag}</p>
                   </td>
                   <td className="px-6 py-4 font-medium text-indigo-300">{alloc.assignedTo}</td>
                   <td className="px-6 py-4">
                     <p className="text-sm">Assigned: {alloc.assignedDate}</p>
                     {alloc.expectedReturnDate && (
-                      <p className="text-xs text-orange-400 mt-1 flex items-center gap-1">
+                      <p className={`text-xs mt-1 flex items-center gap-1 ${isOverdue ? 'text-red-400 font-bold' : 'text-orange-400'}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         Due: {alloc.expectedReturnDate}
                       </p>
@@ -147,7 +152,7 @@ const AllocationsTab = ({ data, onOpenAllocate, onOpenReturn, onOpenTransfer }) 
                     </button>
                   </td>
                 </tr>
-              ))
+              )})
             )}
           </tbody>
         </table>

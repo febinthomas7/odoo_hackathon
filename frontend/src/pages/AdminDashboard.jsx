@@ -3,12 +3,12 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 
 // Modules
-import DashboardOverview from '../components/modules/DashboardOverview';
-import OrganizationSetup from '../components/modules/OrganizationSetup';
-import Assets from '../components/modules/Assets';
-import Audit from '../components/modules/Audit';
-import Reports from '../components/modules/Reports';
-import Notifications from '../components/modules/Notifications';
+import DashboardOverview from './modules/DashboardOverview';
+import OrganizationSetup from './modules/OrganizationSetup';
+import Assets from './modules/Assets';
+import Audit from './modules/Audit';
+import Reports from './modules/Reports';
+import Notifications from './modules/Notifications';
 
 const AdminDashboard = () => {
   const [activeModule, setActiveModule] = useState('Dashboard');
@@ -25,7 +25,7 @@ const AdminDashboard = () => {
   const renderModule = () => {
     switch (activeModule) {
       case 'Dashboard':
-        return <DashboardOverview role="Admin" />;
+        return <DashboardOverview />;
       case 'Organization setup':
         return <OrganizationSetup />;
       case 'Assets':

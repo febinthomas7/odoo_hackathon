@@ -1,56 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, forgotPassword } from '../api/authApi';
-import { setSession } from '../utils/session';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showForgot, setShowForgot] = useState(false);
-  const [forgotMsg, setForgotMsg] = useState(null);
 
-  const handleLogin = async (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const { token, user } = await login(email, password);
-      // Save session
-      setSession(token, user.role, user.name, user.id);
-      
-      // Route based on role
-      switch (user.role) {
-        case 'Admin': navigate('/admin-dashboard'); break;
-        case 'Asset Manager': navigate('/asset-manager-dashboard'); break;
-        case 'Department Head': navigate('/department-head-dashboard'); break;
-        default: navigate('/employee-dashboard'); break;
-      }
-    } catch (err) {
-      setError(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgot = async (e) => {
-    e.preventDefault();
-    if (!email) {
-      setError("Please enter your email address first.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await forgotPassword(email);
-      setForgotMsg(res.message);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    // Yahan actual API call aayegi future mein
+    navigate('/dashboard');
   };
 
   return (
@@ -72,78 +29,39 @@ const Login = () => {
           <p className="text-slate-400 text-sm mt-1">Sign in to manage your assets</p>
         </div>
 
-        {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg mb-4">{error}</div>}
-        {forgotMsg && <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm p-3 rounded-lg mb-4">{forgotMsg}</div>}
+        <form className="flex flex-col gap-4" onSubmit={handleLogin}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="email" className="text-sm font-medium text-slate-300">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              placeholder="name@company.com" 
+              className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
+              required 
+            />
+          </div>
 
-        {!showForgot ? (
-          <form className="flex flex-col gap-4" onSubmit={handleLogin}>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-sm font-medium text-slate-300">Email Address</label>
-              <input 
-                type="email" 
-                id="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com" 
-                className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
-                required 
-              />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between items-center">
+              <label htmlFor="password" className="text-sm font-medium text-slate-300">Password</label>
+              <a href="#forgot" className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">Forgot password?</a>
             </div>
+            <input 
+              type="password" 
+              id="password" 
+              placeholder="••••••••" 
+              className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
+              required 
+            />
+          </div>
 
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-sm font-medium text-slate-300">Password</label>
-                <button type="button" onClick={() => setShowForgot(true)} className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">Forgot password?</button>
-              </div>
-              <input 
-                type="password" 
-                id="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" 
-                className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
-                required 
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="mt-2 w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-medium py-3 rounded-lg text-base shadow-lg shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              {loading ? 'Signing In...' : 'Sign In'}
-            </button>
-          </form>
-        ) : (
-          <form className="flex flex-col gap-4" onSubmit={handleForgot}>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="reset-email" className="text-sm font-medium text-slate-300">Email Address</label>
-              <input 
-                type="email" 
-                id="reset-email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com" 
-                className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2.5 px-3 text-white text-base outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500"
-                required 
-              />
-            </div>
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="mt-2 w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-medium py-3 rounded-lg text-base shadow-lg shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </button>
-            <button 
-              type="button" 
-              onClick={() => { setShowForgot(false); setForgotMsg(null); setError(null); }}
-              className="mt-2 text-sm text-slate-400 hover:text-white text-center"
-            >
-              Back to Login
-            </button>
-          </form>
-        )}
+          <button 
+            type="submit" 
+            className="mt-2 w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-medium py-3 rounded-lg text-base shadow-lg shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5"
+          >
+            Sign In
+          </button>
+        </form>
 
         <div className="mt-5 flex items-center gap-3">
           <div className="h-px w-full bg-white/10"></div>

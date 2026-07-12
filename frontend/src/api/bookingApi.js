@@ -1,9 +1,8 @@
 import api from './axios';
 import { mockBookings } from './mockData';
+import { logActivity } from './activityLogApi';
 
 const useMockFallback = true; 
-
-let localBookings = [...mockBookings];
 
 /**
  * GET /bookings/
@@ -18,7 +17,7 @@ export const getBookings = async () => {
     console.error("API Error (getBookings), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return localBookings;
+      return [...mockBookings];
     }
     throw error;
   }
@@ -39,12 +38,13 @@ export const createBooking = async (bookingData) => {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // Basic Overlap validation for mock
-      const isOverlap = localBookings.some(b => 
-        b.assetId === parseInt(bookingData.assetId) && 
+      const isOverlap = mockBookings.some(b => 
+        b.assetId.toString() === bookingData.assetId.toString() && 
         b.date === bookingData.date &&
         b.status !== 'Cancelled' &&
         ((bookingData.startTime >= b.startTime && bookingData.startTime < b.endTime) ||
-         (bookingData.endTime > b.startTime && bookingData.endTime <= b.endTime))
+         (bookingData.endTime > b.startTime && bookingData.endTime <= b.endTime) ||
+         (bookingData.startTime <= b.startTime && bookingData.endTime >= b.endTime))
       );
 
       if(isOverlap) {
@@ -54,9 +54,10 @@ export const createBooking = async (bookingData) => {
       const newBooking = {
         ...bookingData,
         id: Date.now(),
-        status: 'Upcoming'
+        status: 'Upcoming' // Later, an auto-transition can move this to Active when time arrives
       };
-      localBookings.push(newBooking);
+      mockBookings.push(newBooking);
+      logActivity(`Created booking for ${bookingData.assetName} by ${bookingData.bookedBy}`);
       return newBooking;
     }
     throw error;
@@ -76,7 +77,11 @@ export const cancelBooking = async (id) => {
     console.error("API Error (cancelBooking), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      localBookings = localBookings.map(b => b.id === id ? { ...b, status: 'Cancelled' } : b);
+      const idx = mockBookings.findIndex(b => b.id === id);
+      if (idx !== -1) {
+        mockBookings[idx].status = 'Cancelled';
+        logActivity(`Cancelled booking for ${mockBookings[idx].assetName} by ${mockBookings[idx].bookedBy}`);
+      }
       return { success: true };
     }
     throw error;

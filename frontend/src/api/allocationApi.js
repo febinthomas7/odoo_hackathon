@@ -1,9 +1,8 @@
 import api from './axios';
-import { mockAllocations } from './mockData';
+import { mockAllocations, mockAssets } from './mockData';
+import { logActivity } from './activityLogApi';
 
 const useMockFallback = true; 
-
-let localAllocations = [...mockAllocations];
 
 /**
  * GET /allocations/
@@ -18,7 +17,7 @@ export const getAllocations = async () => {
     console.error("API Error (getAllocations), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return localAllocations;
+      return [...mockAllocations];
     }
     throw error;
   }
@@ -40,10 +39,19 @@ export const allocateAsset = async (allocationData) => {
       const newAllocation = {
         ...allocationData,
         id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        status: 'Allocated'
+        assignedDate: new Date().toISOString().split('T')[0],
+        status: 'Active'
       };
-      localAllocations.push(newAllocation);
+      mockAllocations.push(newAllocation);
+      
+      // Update asset status
+      const asset = mockAssets.find(a => a.id.toString() === allocationData.assetId.toString());
+      if (asset) {
+        asset.status = 'Allocated';
+        asset.assignedTo = allocationData.assignedTo;
+      }
+      
+      logActivity(`Allocated ${allocationData.assetName} to ${allocationData.assignedTo}`);
       return newAllocation;
     }
     throw error;
@@ -66,10 +74,11 @@ export const requestTransfer = async (transferData) => {
       const newTransfer = {
         ...transferData,
         id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        status: 'Transfer Pending'
+        requestDate: new Date().toISOString().split('T')[0],
+        status: 'Pending'
       };
-      localAllocations.push(newTransfer);
+      mockAllocations.push(newTransfer);
+      logActivity(`Requested transfer of ${transferData.assetName} to ${transferData.requestedBy}`);
       return newTransfer;
     }
     throw error;
@@ -89,7 +98,7 @@ export const getTransferRequests = async () => {
     console.error("API Error (getTransferRequests), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return localAllocations.filter(a => a.status === 'Transfer Pending');
+      return mockAllocations.filter(a => a.status === 'Pending');
     }
     throw error;
   }
@@ -108,7 +117,25 @@ export const approveTransfer = async (transferId) => {
     console.error("API Error (approveTransfer), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      localAllocations = localAllocations.map(a => a.id === transferId ? { ...a, status: 'Allocated' } : a);
+      const reqIndex = mockAllocations.findIndex(a => a.id === transferId);
+      if (reqIndex !== -1) {
+        mockAllocations[reqIndex].status = 'Active';
+        mockAllocations[reqIndex].assignedDate = new Date().toISOString().split('T')[0];
+        
+        // Find previous active allocation for this asset and mark it as Transferred/Returned
+        const assetId = mockAllocations[reqIndex].assetId;
+        const prevAllocIndex = mockAllocations.findIndex(a => a.assetId === assetId && a.status === 'Active' && a.id !== transferId);
+        if(prevAllocIndex !== -1) {
+          mockAllocations[prevAllocIndex].status = 'Returned';
+        }
+        
+        // Update asset
+        const asset = mockAssets.find(a => a.id.toString() === assetId.toString());
+        if (asset) {
+          asset.assignedTo = mockAllocations[reqIndex].requestedBy;
+        }
+        logActivity(`Approved transfer of ${mockAllocations[reqIndex].assetName} to ${mockAllocations[reqIndex].requestedBy}`);
+      }
       return { success: true };
     }
     throw error;
@@ -128,7 +155,20 @@ export const returnAsset = async (allocationId, condition) => {
     console.error("API Error (returnAsset), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      localAllocations = localAllocations.map(a => a.id === allocationId ? { ...a, status: 'Returned' } : a);
+      const allocIndex = mockAllocations.findIndex(a => a.id === allocationId);
+      if (allocIndex !== -1) {
+        mockAllocations[allocIndex].status = 'Returned';
+        mockAllocations[allocIndex].returnCondition = condition;
+        mockAllocations[allocIndex].actualReturnDate = new Date().toISOString().split('T')[0];
+        
+        // Update asset
+        const asset = mockAssets.find(a => a.id.toString() === mockAllocations[allocIndex].assetId.toString());
+        if (asset) {
+          asset.status = 'Available';
+          asset.assignedTo = null;
+        }
+        logActivity(`Asset returned: ${mockAllocations[allocIndex].assetName} (${condition})`);
+      }
       return { success: true };
     }
     throw error;

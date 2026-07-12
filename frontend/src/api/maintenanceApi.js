@@ -1,9 +1,8 @@
 import api from './axios';
-import { mockMaintenanceRequests } from './mockData';
+import { mockMaintenanceRequests, mockAssets } from './mockData';
+import { logActivity } from './activityLogApi';
 
 const useMockFallback = true; 
-
-let localRequests = [...mockMaintenanceRequests];
 
 /**
  * GET /maintenance/
@@ -18,7 +17,7 @@ export const getMaintenanceRequests = async () => {
     console.error("API Error (getMaintenanceRequests), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      return localRequests;
+      return [...mockMaintenanceRequests];
     }
     throw error;
   }
@@ -44,7 +43,12 @@ export const raiseRequest = async (requestData) => {
         status: 'Pending',
         technician: null,
       };
-      localRequests.push(newRequest);
+      mockMaintenanceRequests.push(newRequest);
+      
+      // Sync asset status to Under Maintenance immediately upon raising request?
+      // Or maybe wait for approval. We'll wait for approval for cross-module sync.
+      
+      logActivity(`Maintenance request raised for ${requestData.assetName} by ${requestData.reportedBy}`);
       return newRequest;
     }
     throw error;
@@ -64,7 +68,23 @@ export const updateRequestStatus = async (requestId, updates) => {
     console.error("API Error (updateRequestStatus), falling back to mock:", error);
     if (useMockFallback) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      localRequests = localRequests.map(r => r.id === requestId ? { ...r, ...updates } : r);
+      const reqIndex = mockMaintenanceRequests.findIndex(r => r.id === requestId);
+      if (reqIndex !== -1) {
+        mockMaintenanceRequests[reqIndex] = { ...mockMaintenanceRequests[reqIndex], ...updates };
+        
+        // Cross-module asset sync based on status
+        const assetId = mockMaintenanceRequests[reqIndex].assetId;
+        const asset = mockAssets.find(a => a.id.toString() === assetId.toString());
+        if (asset) {
+          if (updates.status === 'In Progress' || updates.status === 'Approved') {
+            asset.status = 'Under Maintenance';
+          } else if (updates.status === 'Resolved' || updates.status === 'Rejected') {
+            asset.status = 'Available'; // Assume it goes back to available, or we could leave it if allocated. For simplicity, Available.
+          }
+        }
+        
+        logActivity(`Maintenance request ${requestId} status updated to ${updates.status}`);
+      }
       return { success: true };
     }
     throw error;
